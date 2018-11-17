@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import os
+import json
 import requests
+import collections
 from utils import get_groundTruth
 
 user_agent = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 '
@@ -24,11 +26,6 @@ def get_json(url, headers=header, params=payload):
     obj = r.json()
     # print("The rate limit remaining: {}".format(int(r.headers['X-RateLimit-Remaining'])))
     return obj
-
-
-def get_repo(full_repo_name):
-    repo_url = os.path.join("https://api.github.com/repos", full_repo_name)
-    return get_json(repo_url)
 
 
 def get_user(user_name):
@@ -135,7 +132,7 @@ def write_contributors(input_path, output_path):
 
 
 def write_all_repositories(input_path, output_path, include_fork=False):
-    """ Write all the repositories to output file.input_path
+    """ Write all the repositories to output file.
 
     @Parameters
     -----------
@@ -180,6 +177,97 @@ def write_all_repositories(input_path, output_path, include_fork=False):
     print("Successfully saved {}".format(output_path))
 
 
+def get_repo_info(full_repo_name, user_set):
+    """ Retrieve the repository information.
+
+    @Parameters
+    -----------
+    full_repo_name: Name of the repository
+    user_set: The entire user set, this is used to check contributor
+
+    @Returns
+    --------
+    repo: a dict containing the repo information
+
+    """
+    # Get the contributors information of the repository
+    print("Retrieving the information of {}".format(full_repo_name))
+    contributor_info = collections.defaultdict(int)
+    cur_page = 1
+    while True:
+        url = os.path.join("https://api.github.com/repos", full_repo_name,
+                           "contributors?page=" + str(cur_page))
+        obj = get_json(url)
+        if not obj:     # break if it's an empty page
+            break
+
+        print("Processing page: {}".format(cur_page))
+        for user in obj:
+            if user["login"] in user_set:
+                contributor_info[user["login"]] += user["contributions"]
+        cur_page += 1
+    print("Total number of contributors: {}".format(len(contributor_info.keys())))
+
+    # Get other repository information
+    repo_url = os.path.join("https://api.github.com/repos", full_repo_name)
+    repo_obj = get_json(repo_url)
+    repo = {
+        "full_name": repo_obj["full_name"],
+        "id": repo_obj["id"],
+        "owner": repo_obj["owner"]["login"],
+        "watch_count": repo_obj["subscribers_count"],
+        "star_count": repo_obj["stargazers_count"],
+        "fork_count": repo_obj["forks"],
+        "contributors": contributor_info
+    }
+    print("Successfully get the information of repo: {}\n".format(full_repo_name))
+    return repo
+
+
+def write_repos_info(input_path, output_path):
+
+    # Read the entire repo list
+    repo_file = open(input_path, 'r')
+    remain_repos = {line.rstrip() for line in repo_file}
+
+    # Eliminate the repos that are already examined
+    examined_path = os.path.join(output_dir, 'examined_repos.txt')
+    try:
+        with open(examined_path, 'r') as examined_file:
+            for line in examined_file:
+                remain_repos.remove(line.rstrip())
+    except IOError:
+        print("Examined repo file {} does not exist.".format(examined_path))
+    print("Number of remaining repo: {}".format(len(remain_repos)))
+
+    # Read the entire user list
+    user_file = open(os.path.join(output_dir, 'all_users.txt'), 'r')
+    all_users = {line.rstrip() for line in user_file}
+
+    # Get the information of each repo and write them to output file
+    with open(output_path, 'a') as outfile, open(examined_path, 'a') as examined_file:
+        current_repo = None
+        try:
+            for full_repo_name in remain_repos:
+                current_repo = full_repo_name
+                repo_dict = get_repo_info(full_repo_name, all_users)
+
+                # Write the examined repo and repo information to file
+                examined_file.write(full_repo_name + '\n')
+                if not repo_dict:
+                    continue
+                else:
+                    contri_str = " ".join(k + ':' + str(v) for k, v in repo_dict["contributors"].items())
+                    info_list = [repo_dict["full_name"], repo_dict["id"], repo_dict["owner"],
+                                 repo_dict["watch_count"], repo_dict["star_count"], repo_dict["fork_count"],
+                                 contri_str]
+                    info = " ".join([str(s) for s in info_list])
+                    outfile.write(info + '\n')
+        except requests.exceptions.HTTPError:
+            print("Exceeds rate limit, stop at repo {}".format(current_repo))
+    print("Successfully saved {}".format(output_path))
+
+
 if __name__ == "__main__":
     # Make the output directory
     if not os.path.exists(output_dir):
@@ -204,3 +292,55 @@ if __name__ == "__main__":
     input_path = os.path.join(output_dir, 'all_users.txt')
     output_path = os.path.join(output_dir, 'all_repos.txt')
     write_all_repositories(input_path, output_path)
+
+    # Write all repo information
+    input_path = os.path.join(output_dir, 'all_repos.txt')
+    output_path = os.path.join(output_dir, 'all_repos_info.txt')
+    write_repos_info(input_path, output_path)
+
+    # Save repos_info.json file
+    input_path = os.path.join(output_dir, 'all_repos_info.txt')
+    output_path = os.path.join(output_dir, 'repos_info.json')
+    repos_info = {}
+    with open(input_path, 'r') as infile:
+        for line in infile:
+            words = line.split()
+
+            full_repo_name = words[0]
+            contributors = {}
+            for pair in words[6:]:
+                pair = pair.split(':')
+                user = pair[0]
+                contribution = int(pair[1])
+                contributors[user] = contribution
+            info = {
+                "id": int(words[1]),
+                "owner": words[2],
+                "watch_count": int(words[3]),
+                "star_count": int(words[4]),
+                "fork_count": int(words[5]),
+                "contributors": contributors
+            }
+            repos_info[full_repo_name] = info
+    with open(output_path, 'w') as outfile:
+        json.dump(repos_info, outfile, indent=4, sort_keys=True, separators=(',', ':'))
+    print("The file: {} is written and saved.".format(output_path))
+
+    # Save user_info.json file
+    input_path = os.path.join(output_dir, 'repos_info.json')
+    output_path = os.path.join(output_dir, 'users_info.json')
+
+    repos_info = json.load(open(input_path, 'r'))
+    all_users = [line.rstrip() for line in open(os.path.join(output_dir, 'all_users.txt'), 'r')]
+    users_info = {user: {"owned_repos": [], "written_repos": []} for user in all_users}
+
+    for full_repo_name, info in repos_info.items():
+        owner = info["owner"]
+        contributors = info["contributors"].keys()
+        users_info[owner]["owned_repos"].append(full_repo_name)
+        for user in contributors:
+            users_info[user]["written_repos"].append(full_repo_name)
+
+    with open(output_path, 'w') as outfile:
+        json.dump(users_info, outfile, indent=4, sort_keys=True, separators=(',', ':'))
+    print("The file: {} is written and saved.".format(output_path))
