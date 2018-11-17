@@ -5860,7 +5860,7 @@ sahutd/cachediff
 sahutd/yagc
 Kalvar/python-GreyTheory
 jinyeom/2015-FRI-Summer-Research
-jinyeom/actor-critic
+jinyeom/riley
 jinyeom/amber
 jinyeom/big-little-match
 jinyeom/bitcoin-collector
