@@ -10,7 +10,7 @@ minimaxir, 27543
 fchollet, 26426
 soimort, 18127
 floodsung, 17446
-valloric, 16538
+Valloric, 16538
 alexjc, 16520
 vinta, 15963
 eriklindernoren, 15567

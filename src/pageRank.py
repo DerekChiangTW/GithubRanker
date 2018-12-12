@@ -59,20 +59,26 @@ if __name__ == '__main__':
     rand_jump_prob = 0.2
     graph_path = 'output/user_graph'
     top30users = 'data/top30-award.txt'
-    result_path = 'output/result_pageRank.txt'
+    result_path = 'output/result_pageRank.tsv'
 
     pageRank = PageRank(graph_path)
     user_dic = pageRank.node_dic
     probs = pageRank.run(rand_jump_prob)
     rank = np.argsort(probs)
 
+
+    user_name = []
+    user_rank = []
     with open(top30users, 'r') as infile, open(result_path, 'w') as outfile:
-        outfile.write('user,probability,predict_rank\n')
-        for line in infile:
-            user_name, _ = line.strip().split(', ')
+        outfile.write('user\tprobability\tpredict_rank\n')
+        for idx, line in enumerate(infile):
+            user_name.append(line.strip().split(', ')[0])
+            user_rank.append(rank[user_dic[user_name[idx]]])
+        user_rank = np.argsort(user_rank)
+        print(user_rank)
+        for idx, name in enumerate(user_name):
             try:
-                outfile.write(user_name+','+str(probs[user_dic[user_name]])+','+str(rank[user_dic[user_name]])+'\n')
+                outfile.write(f'{name}\t{probs[user_dic[name]]:.4f}\t{user_rank[idx]+1}\n')
             except Exception as e:
                 print('Exception:', e)
-                continue
 
