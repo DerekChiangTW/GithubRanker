@@ -1,6 +1,5 @@
 import sys
 import numpy as np
-import json
 
 class PageRank():
     def __init__(self, input_filename):
@@ -9,9 +8,6 @@ class PageRank():
         self.trans_matrix = None
 
         graph, self.node_dic = self.build_graph(input_filename)
-        #print(node_dic)
-        #with open('node_dic.json', 'w') as outfile:
-        #    json.dump(node_dic, outfile, indent=4)
         N = len(self.node_dic)
         print('Total # of users in graph', N)
         self.trans_matrix = self.build_transMatrix(graph)
@@ -56,29 +52,32 @@ class PageRank():
         return prob
     
 if __name__ == '__main__':
-    rand_jump_prob = 0.2
     graph_path = 'output/user_graph'
-    top30users = 'data/top30-award.txt'
-    result_path = 'output/result_pageRank.tsv'
+    top30_path = 'data/top30-award.txt'
 
+    # Get top 30 users
+    users = []
+    with open(top30_path, 'r') as infile:
+        users = [line.strip().split(', ')[0] for line in infile]
+
+    # Run PageRank
     pageRank = PageRank(graph_path)
     user_dic = pageRank.node_dic
-    probs = pageRank.run(rand_jump_prob)
-    rank = np.argsort(probs)
 
+    # random jump probability: [0, 1]
+    for i in range(11):
+        rand_jump_prob = 0.1 * i
+        probs = pageRank.run(rand_jump_prob)
+        rank = np.argsort(probs)
+        user_rank_abs = [rank[user_dic[user]] for user in users]
+        user_rank_rel = np.argsort(user_rank_abs)
 
-    user_name = []
-    user_rank = []
-    with open(top30users, 'r') as infile, open(result_path, 'w') as outfile:
-        outfile.write('user\tprobability\tpredict_rank\n')
-        for idx, line in enumerate(infile):
-            user_name.append(line.strip().split(', ')[0])
-            user_rank.append(rank[user_dic[user_name[idx]]])
-        user_rank = np.argsort(user_rank)
-        print(user_rank)
-        for idx, name in enumerate(user_name):
-            try:
-                outfile.write(f'{name}\t{probs[user_dic[name]]:.4f}\t{user_rank[idx]+1}\n')
-            except Exception as e:
-                print('Exception:', e)
+        result_path = f'output/result_PR_{rand_jump_prob:.1f}.tsv'
+        with open(result_path, 'w') as outfile:
+            outfile.write('user\tprobability\tpredict_rank\n')
+            for idx, user in enumerate(users):
+                try:
+                    outfile.write(f'{user}\t{probs[user_dic[user]]:.4f}\t{user_rank_rel[idx]+1}\n')
+                except Exception as e:
+                    print('Exception:', e)
 

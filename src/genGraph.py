@@ -1,12 +1,12 @@
 """
-Output graph file: entity1, entity2
+Output graph file: entity1,entity2
 """
 import json
 
 def pairwise(contributors):
     pair_list = []
-    for i in range(len(contributors)-2):
-        for j in range(i+1, len(contributors)-1):
+    for i in range(len(contributors)-1):
+        for j in range(i+1, len(contributors)):
             pair_list.append(contributors[i] + ',' + contributors[j])
             pair_list.append(contributors[j] + ',' + contributors[i])
     return pair_list
