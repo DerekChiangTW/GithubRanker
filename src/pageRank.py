@@ -1,8 +1,10 @@
 import sys
+import os
 import numpy as np
 
 class PageRank():
-    def __init__(self, input_filename):
+    def __init__(self, input_filename, weighted=False):
+        self.weighted = weighted
         graph = {}
         self.node_dic = {}
         self.trans_matrix = None
@@ -32,7 +34,10 @@ class PageRank():
         trans_matrix = np.zeros((N, N))
         for start, ends in graph.items():
             for end in ends:
-                trans_matrix[start][end] = 1
+                if self.weighted:
+                    trans_matrix[start][end] += 1
+                else:
+                    trans_matrix[start][end] = 1
         trans_matrix /= np.sum(trans_matrix, axis=1)[:, np.newaxis]
 
         # Solve zero-outlink problem (if all elements in a row is zero, assign 1/N to all nodes)
@@ -54,6 +59,7 @@ class PageRank():
 if __name__ == '__main__':
     graph_path = 'output/user_graph'
     top30_path = 'data/top30-award.txt'
+    weighted_graph = True
 
     # Get top 30 users
     users = []
@@ -61,7 +67,7 @@ if __name__ == '__main__':
         users = [line.strip().split(', ')[0] for line in infile]
 
     # Run PageRank
-    pageRank = PageRank(graph_path)
+    pageRank = PageRank(graph_path, weighted_graph)
     user_dic = pageRank.node_dic
 
     # random jump probability: [0, 1]
@@ -72,7 +78,15 @@ if __name__ == '__main__':
         user_rank_abs = [rank[user_dic[user]] for user in users]
         user_rank_rel = np.argsort(user_rank_abs)
 
-        result_path = f'output/result_PR_{rand_jump_prob:.1f}.tsv'
+        if weighted_graph:
+            if not os.path.exists('output/result_WPR'):
+                os.makedirs('output/result_WPR')
+            result_path = f'output/result_WPR/{rand_jump_prob:.1f}.tsv'
+        else:
+            if not os.path.exists('output/result_PR'):
+                os.makedirs('output/result_PR')
+            result_path = f'output/result_PR/{rand_jump_prob:.1f}.tsv'
+
         with open(result_path, 'w') as outfile:
             outfile.write('user\tprobability\tpredict_rank\n')
             for idx, user in enumerate(users):
