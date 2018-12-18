@@ -1,0 +1,1 @@
+./libFM -task r -train ../../output/train.txt -test ../../output/test.txt -out ../../output/predictions.txt -dim '1,1,8' -iter 1000

@@ -5,7 +5,7 @@ import os
 import json
 import requests
 import collections
-from utils import get_groundTruth
+from utils import get_top30
 
 user_agent = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 '
               '(KHTML, like Gecko) Chrome/42.0.2311.90 Safari/537.36')
@@ -80,8 +80,7 @@ def write_top30_repo(input_path, output_path, include_fork=False):
 
     """
     # Get the top 30 users
-    gt = get_groundTruth(input_path)
-    top_users = gt.keys()
+    top_users = get_top30()
 
     # Retrieve the Python repositories of the top users
     print("Writing to {}".format(output_path))
