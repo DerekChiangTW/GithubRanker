@@ -64,34 +64,31 @@ if __name__ == '__main__':
     # Get top 30 users
     users = []
     with open(top30_path, 'r') as infile:
-        users = [line.strip().split(', ')[0] for line in infile]
+        users = [line.strip().split(',')[0] for line in infile]
 
     # Run PageRank
     pageRank = PageRank(graph_path, weighted_graph)
     user_dic = pageRank.node_dic
+    probs = pageRank.run(rand_jump_prob)
 
-    # random jump probability: [0, 1]
-    for i in range(11):
-        rand_jump_prob = 0.1 * i
-        probs = pageRank.run(rand_jump_prob)
+    for i in range(1, 4):
+        rand_jump_prob = 0.85
+        k = 10 * i
+        topK_users = users[:k]
         rank = np.argsort(probs)
-        user_rank_abs = [rank[user_dic[user]] for user in users]
+        user_rank_abs = [rank[user_dic[user]] for user in topK_users]
         user_rank_rel = np.argsort(user_rank_abs)
 
         if weighted_graph:
-            if not os.path.exists('output/result_WPR'):
-                os.makedirs('output/result_WPR')
-            result_path = f'output/result_WPR/{rand_jump_prob:.1f}.tsv'
+            result_path = f'output/result/top{k}/result_WpageRank.txt'
         else:
-            if not os.path.exists('output/result_PR'):
-                os.makedirs('output/result_PR')
-            result_path = f'output/result_PR/{rand_jump_prob:.1f}.tsv'
+            result_path = f'output/result/top{k}/result_pageRank.txt'
 
+        print('Write to', result_path) 
         with open(result_path, 'w') as outfile:
-            outfile.write('user\tprobability\tpredict_rank\n')
-            for idx, user in enumerate(users):
+            for idx, user in enumerate(topK_users):
                 try:
-                    outfile.write(f'{user}\t{probs[user_dic[user]]:.4f}\t{user_rank_rel[idx]+1}\n')
+                    outfile.write(f'{user},{probs[user_dic[user]]},{user_rank_rel[idx]+1}\n')
                 except Exception as e:
                     print('Exception:', e)
 
