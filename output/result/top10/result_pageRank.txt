@@ -1,0 +1,10 @@
+donnemartin,0.0006,4
+kennethreitz,0.0012,10
+mitsuhiko,0.0006,7
+jakubroztocil,0.0004,1
+nvbn,0.0004,3
+rg3,0.0003,2
+toddmotto,0.0003,5
+josephmisiti,0.0003,6
+minimaxir,0.0004,8
+fchollet,0.0003,9
