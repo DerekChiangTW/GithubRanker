@@ -6,13 +6,14 @@ import json
 from src.utils import *
 from scipy.stats import spearmanr, kendalltau
 
-output_dir = 'output'
+data_dir = os.path.join('data', 'Python')
+output_dir = os.path.join('output', 'Python')
 result_dir = os.path.join(output_dir, 'result')
 top10_dir = os.path.join(result_dir, 'top10')
 top20_dir = os.path.join(result_dir, 'top20')
 top30_dir = os.path.join(result_dir, 'top30')
 
-top30 = get_top30(os.path.join('data', 'top30-award.txt'))
+top30 = get_top30(os.path.join(data_dir, 'top30-award.txt'))
 all_users = get_all_users(os.path.join(output_dir, 'all_users.txt'))
 all_repos = get_all_repos(os.path.join(output_dir, 'all_repos.txt'))
 
@@ -61,6 +62,16 @@ def save_fm_result(user_list, path):
     print("Successfully saved file: {}".format(path))
 
 
+def save_w_fm_result(user_list, path):
+    with open(path, 'w') as outfile:
+        fm_scores = compute_w_fm_score(output_dir, all_users, idx2user)
+        fm = [fm_scores[user] for user in user_list]
+        rank = rank_of_list(fm)
+        for i in range(len(user_list)):
+            outfile.write(",".join([user_list[i], str(fm[i]), str(rank[i])]) + "\n")
+    print("Successfully saved file: {}".format(path))
+
+
 def load_result(path):
     ranks = []
     with open(path, 'r') as infile:
@@ -83,6 +94,7 @@ if __name__ == "__main__":
     # save_written_result(top30, os.path.join(top30_dir, 'result_written.txt'))
     # save_contribution_result(top30, os.path.join(top30_dir, 'result_commit.txt'))
     # save_fm_result(top30, os.path.join(top30_dir, 'result_wo_fm.txt'))
+    # save_w_fm_result(top30, os.path.join(top30_dir, 'result_w_fm.txt'))
 
     # save top20 results
     # top20 = top30[:20]
@@ -90,6 +102,7 @@ if __name__ == "__main__":
     # save_written_result(top20, os.path.join(top20_dir, 'result_written.txt'))
     # save_contribution_result(top20, os.path.join(top20_dir, 'result_commit.txt'))
     # save_fm_result(top20, os.path.join(top20_dir, 'result_wo_fm.txt'))
+    # save_w_fm_result(top20, os.path.join(top20_dir, 'result_w_fm.txt'))
 
     # save top10 results
     # top10 = top30[:10]
@@ -97,46 +110,30 @@ if __name__ == "__main__":
     # save_written_result(top10, os.path.join(top10_dir, 'result_written.txt'))
     # save_contribution_result(top10, os.path.join(top10_dir, 'result_commit.txt'))
     # save_fm_result(top10, os.path.join(top10_dir, 'result_wo_fm.txt'))
+    # save_w_fm_result(top10, os.path.join(top10_dir, 'result_w_fm.txt'))
 
-    # correct_ranks = list(range(1, 31))
-    # path = os.path.join(top30_dir, "result_owned.txt")
-    # ranks = load_result(path)
-    # print(spearmanr(correct_ranks, ranks))
-    # print(kendalltau(correct_ranks, ranks))
+    # get relevance score
+    relevance_scores = get_relevance(os.path.join(data_dir, "top30-award.txt"))
+    sorted_relevance = [None for i in range(30)]
 
-    # path = os.path.join(top30_dir, "result_written.txt")
-    # ranks = load_result(path)
-    # print(spearmanr(correct_ranks, ranks))
-    # print(kendalltau(correct_ranks, ranks))
+    # show the results
+    file_names = ["result_owned.txt", "result_written.txt", "result_commit.txt",
+                  "result_pageRank.txt", "result_WpageRank.txt", "result_wo_fm.txt", "result_w_fm.txt"]
+    result_types = ["Owned", "Written", "Commits", "PageRank(binary)", "PageRank(weighted)", "FM wo", "FM w"]
+    dirs = [top10_dir, top20_dir, top30_dir]
+    dir_names = ["top 10", "top 20", "top 30"]
+    correct_ranks = [list(range(1, 11)), list(range(1, 21)), list(range(1, 31))]
+    for dir, dir_name, correct_rank in zip(dirs, dir_names, correct_ranks):
+        print("\nThe result for {} users...".format(dir_name))
+        length = len(correct_rank)
+        for result_type, file_name in zip(result_types, file_names):
+            rank = load_result(os.path.join(dir, file_name))
+            rho, _ = spearmanr(correct_rank, rank)
+            tau, _ = kendalltau(correct_rank, rank)
 
-    # path = os.path.join(top30_dir, "result_commit.txt")
-    # ranks = load_result(path)
-    # print(spearmanr(correct_ranks, ranks))
-    # print(kendalltau(correct_ranks, ranks))
-
-    # path = os.path.join(top30_dir, "result_wo_fm.txt")
-    # ranks = load_result(path)
-    # print(spearmanr(correct_ranks, ranks))
-    # print(kendalltau(correct_ranks, ranks))
-
-    # correct_ranks = list(range(1, 11))
-    # path = os.path.join(top10_dir, "result_owned.txt")
-    # ranks = load_result(path)
-    # print(spearmanr(correct_ranks, ranks))
-    # print(kendalltau(correct_ranks, ranks))
-
-    # path = os.path.join(top10_dir, "result_written.txt")
-    # ranks = load_result(path)
-    # print(spearmanr(correct_ranks, ranks))
-    # print(kendalltau(correct_ranks, ranks))
-
-    # path = os.path.join(top10_dir, "result_commit.txt")
-    # ranks = load_result(path)
-    # print(spearmanr(correct_ranks, ranks))
-    # print(kendalltau(correct_ranks, ranks))
-
-    # path = os.path.join(top10_dir, "result_wo_fm.txt")
-    # ranks = load_result(path)
-    # print(spearmanr(correct_ranks, ranks))
-    # print(kendalltau(correct_ranks, ranks))
-    pass
+            # compute ndcg
+            for i, user in enumerate(top30[:length]):
+                sorted_relevance[rank[i] - 1] = relevance_scores[user]
+            relevance = sorted_relevance[:length]
+            ndcg = compute_ndcg(relevance, num=length)
+            print("{}: Spearman's rho: {}, Kendall's tau: {}, ndcg: {}".format(result_type, rho, tau, ndcg))

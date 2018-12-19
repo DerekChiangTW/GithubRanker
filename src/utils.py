@@ -21,6 +21,14 @@ def get_top30(path):
     return top30
 
 
+def get_relevance(path):
+    stars = get_top30_stars(path)
+    relevance = {}
+    for user, star in stars.items():
+        relevance[user] = int(star / 10000)
+    return relevance
+
+
 def get_all_users(path):
     users = [line.rstrip() for line in open(path, 'r')]
     return users
@@ -49,17 +57,17 @@ def rank_of_list(lst):
     return rank
 
 
-# def compute_dcg(x):
-#     denom = np.array([np.log2(2 + i) for i in range(len(x))])
-#     return np.sum(np.array(x) / denom)
+def compute_dcg(x):
+    denom = np.array([np.log2(2 + i) for i in range(len(x))])
+    return np.sum(np.array(x) / denom)
 
 
-# def compute_ndcg(x, num=10):
-#     """ Return the nDCG@num. """
-#     dcg = compute_dcg(x[:num])
-#     idcg = compute_dcg(sorted(x, reverse=True)[:num])
-#     ndcg = (dcg / idcg) if idcg != 0.0 else -1
-#     return ndcg
+def compute_ndcg(x, num=10):
+    """ Return the nDCG@num. """
+    dcg = compute_dcg(x[:num])
+    idcg = compute_dcg(sorted(x, reverse=True)[:num])
+    ndcg = (dcg / idcg) if idcg != 0.0 else -1
+    return ndcg
 
 
 def save_neighbors(output_dir, all_users, repo_info):
@@ -179,6 +187,23 @@ def compute_fm_score(output_dir, all_users, idx2user):
     fm_scores = {user: len(user_repo[user]["written"]) for user in all_users}
     for user, pred in zip(pred_users, preds):
         fm_scores[user] += pred
+    return fm_scores
+
+
+def compute_w_fm_score(output_dir, all_users, idx2user):
+    # get the fm predictions
+    preds = [float(line.rstrip()) for line in open(os.path.join(output_dir, "predictions.txt"), 'r')]
+
+    # get the corresponding user for each predictions from test file
+    user_indices = [int(line.split(" ")[1].split(":")[0])
+                    for line in open(os.path.join(output_dir, "test.txt"), 'r')]
+    pred_users = [idx2user[ind] for ind in user_indices]
+
+    # compute fm scores
+    user_repo = load_related_repos(os.path.join(output_dir, 'related_repos.json'))
+    fm_scores = {user: len(user_repo[user]["written"]) for user in all_users}
+    for user, pred in zip(pred_users, preds):
+        fm_scores[user] += 0.2
     return fm_scores
 
 
